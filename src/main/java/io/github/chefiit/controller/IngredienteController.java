@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2025 Guilherme Valdivia
+ * 
+ * Este arquivo é parte do projeto Chefit API.
+ * 
+ * Este código está protegido por leis de direitos autorais e não pode ser copiado,
+ * modificado, ou distribuído sem autorização explícita do autor.
+ * 
+ * Todos os direitos reservados.
+ */
+
 package io.github.chefiit.controller;
 
 import java.net.URI;

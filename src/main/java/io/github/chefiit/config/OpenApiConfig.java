@@ -17,7 +17,7 @@ import lombok.RequiredArgsConstructor;
 @Configuration
 public class OpenApiConfig {
 
-	 @Autowired
+	@Autowired
     private DataSource dataSource;
     
 
