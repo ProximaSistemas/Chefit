@@ -1,0 +1,32 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    restart: always
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "r&2Vna,<51AB"
+      MSSQL_PID: "Express"
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'r&2Vna,<51AB' -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      retries: 10
+      start_period: 20s
+      timeout: 3s
+    volumes:
+      - sql_data:/var/opt/mssql
+
+  sql-migrator:
+    image: mcr.microsoft.com/mssql-tools
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    volumes:
+      - ./scripts:/scripts
+    command: >
+      bash -c "/opt/mssql-tools/bin/sqlcmd -S sqlserver -U sa -P 'r&2Vna,<51AB' -i /scripts/init.sql"
+
+volumes:
+  sql_data:
