@@ -6,6 +6,8 @@ import java.util.Set;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -48,6 +50,19 @@ public class Usuario {
     
     @Column(nullable = false)
     private LocalDateTime dataCadastro;
+
+    // DADOS PARA LOGIN E AUTENTICAÇÃO
+    @Enumerated(EnumType.STRING)
+    @Column(name="tipo_usuario", nullable=false)
+    private TipoUsuario tipoUsuario;
+    
+    @Column(unique = true)
+    private String email;
+    
+    private String senha;
+    
+    @Column(unique = true)
+    private String telefone;
 
     
     @ManyToMany

@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,6 +23,7 @@ import io.github.chefiit.model.Receita;
 import io.github.chefiit.model.Usuario;
 import io.github.chefiit.repository.ReceitaRepository;
 import io.github.chefiit.repository.UsuarioRepository;
+import io.github.chefiit.service.AuthorizationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -34,10 +36,14 @@ import jakarta.validation.Valid;
 public class ReceitaController {
     private final ReceitaRepository receitaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final AuthorizationService authorizationService;
 
-    public ReceitaController(ReceitaRepository receitaRepository, UsuarioRepository usuarioRepository) {
+    public ReceitaController(ReceitaRepository receitaRepository, 
+                           UsuarioRepository usuarioRepository,
+                           AuthorizationService authorizationService) {
         this.receitaRepository = receitaRepository;
         this.usuarioRepository = usuarioRepository;
+        this.authorizationService = authorizationService;
     }
 
     @PostMapping
@@ -47,6 +53,17 @@ public class ReceitaController {
             @ApiResponse(responseCode = "400", description = "Dados inválidos")
     })
     public ResponseEntity<Receita> cadastrar(@RequestBody @Valid Receita receita) {
+        // TODO: Se futuramente adicionar campo 'autor' no modelo Receita,
+        // descomente as linhas abaixo para associar ao usuário atual
+        /*
+        if (!authorizationService.isAdmin()) {
+            Usuario currentUser = authorizationService.getCurrentUser();
+            if (currentUser != null) {
+                receita.setAutor(currentUser);
+            }
+        }
+        */
+        
         receita.setDataCadastro(LocalDateTime.now());
         Receita receitaSalva = receitaRepository.save(receita);
         
@@ -61,6 +78,7 @@ public class ReceitaController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Busca uma receita pelo ID")
+    // Endpoint público - qualquer um pode ver receitas
     public ResponseEntity<Receita> buscarPorId(@PathVariable Long id) {
         return receitaRepository.findByIdWithIngredientes(id)
                 .map(ResponseEntity::ok)
@@ -69,6 +87,7 @@ public class ReceitaController {
 
     @GetMapping("/recomendadas/{usuarioId}")
     @Operation(summary = "Busca receitas recomendadas para o usuário")
+    @PreAuthorize("@authorizationService.canAccessUserResource(#usuarioId)")
     public ResponseEntity<List<Receita>> buscarRecomendadas(@PathVariable Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
@@ -85,6 +104,7 @@ public class ReceitaController {
 
     @GetMapping("/busca")
     @Operation(summary = "Busca receitas com filtros")
+    // Endpoint público - qualquer um pode buscar receitas
     public ResponseEntity<List<Receita>> buscarComFiltros(
             @RequestParam(required = false) String categoria,
             @RequestParam(required = false) Integer tempoPreparoMaximo,
@@ -102,6 +122,7 @@ public class ReceitaController {
     @PostMapping("/{receitaId}/favoritar/{usuarioId}")
     @Operation(summary = "Adiciona uma receita aos favoritos do usuário")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("@authorizationService.canManageFavorites(#usuarioId)")
     public void favoritar(@PathVariable Long receitaId, @PathVariable Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
@@ -116,6 +137,7 @@ public class ReceitaController {
     @DeleteMapping("/{receitaId}/desfavoritar/{usuarioId}")
     @Operation(summary = "Remove uma receita dos favoritos do usuário")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("@authorizationService.canManageFavorites(#usuarioId)")
     public void desfavoritar(@PathVariable Long receitaId, @PathVariable Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
@@ -126,6 +148,7 @@ public class ReceitaController {
 
     @GetMapping("/favoritas/{usuarioId}")
     @Operation(summary = "Lista as receitas favoritas do usuário")
+    @PreAuthorize("@authorizationService.canAccessUserResource(#usuarioId)")
     public ResponseEntity<List<Receita>> listarFavoritas(@PathVariable Long usuarioId) {
         List<Receita> favoritas = receitaRepository.findFavoritasByUsuarioId(usuarioId);
         return favoritas.isEmpty() ? 

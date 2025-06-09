@@ -12,6 +12,14 @@ import io.github.chefiit.model.Usuario;
 
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
+
+    // Corrigido: métodos de busca por email e telefone sem senha (para autenticação)
+    Optional<Usuario> findByEmail(String email);
+    Optional<Usuario> findByTelefone(String telefone);
+    
+    // Método adicional para verificar se email já existe
+    boolean existsByEmail(String email);
+    boolean existsByTelefone(String telefone);
     
     Optional<Usuario> findByNomeIgnoreCase(String nome);
     
