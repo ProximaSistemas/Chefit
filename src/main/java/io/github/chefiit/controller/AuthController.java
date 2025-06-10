@@ -14,6 +14,16 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -21,6 +31,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/auth")
 @CrossOrigin(origins = "*")
+@Tag(name = "Autenticação", description = "Endpoints para autenticação e autorização de usuários")
 public class AuthController {
 
     @Autowired
@@ -39,7 +50,75 @@ public class AuthController {
     private AuthorizationService authorizationService;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> loginData) {
+    @Operation(
+        summary = "Realizar login",
+        description = "Autentica um usuário usando email/telefone e senha, retornando um token JWT"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Login realizado com sucesso",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = LoginResponse.class),
+                examples = @ExampleObject(
+                    value = """
+                    {
+                        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                        "userId": 1,
+                        "nome": "João Silva",
+                        "email": "joao@email.com",
+                        "telefone": "11999999999",
+                        "tipoUsuario": "USER"
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Credenciais inválidas ou dados obrigatórios não fornecidos",
+            content = @Content(
+                mediaType = "application/json",
+                examples = {
+                    @ExampleObject(
+                        name = "Campos obrigatórios",
+                        value = """
+                        {
+                            "erro": "Identificação e senha são obrigatórios"
+                        }
+                        """
+                    ),
+                    @ExampleObject(
+                        name = "Credenciais inválidas",
+                        value = """
+                        {
+                            "erro": "Credenciais inválidas"
+                        }
+                        """
+                    )
+                }
+            )
+        )
+    })
+    public ResponseEntity<?> login(
+        @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "Dados de login do usuário",
+            required = true,
+            content = @Content(
+                schema = @Schema(implementation = LoginRequest.class),
+                examples = @ExampleObject(
+                    value = """
+                    {
+                        "identificacao": "joao@email.com",
+                        "senha": "minhasenha123"
+                    }
+                    """
+                )
+            )
+        )
+        @RequestBody Map<String, String> loginData) {
+        
         try {
             String identificacao = loginData.get("identificacao");
             String senha = loginData.get("senha");
@@ -87,7 +166,76 @@ public class AuthController {
     }
 
     @GetMapping("/validate")
-    public ResponseEntity<?> validateToken(@RequestHeader("Authorization") String authHeader) {
+    @Operation(
+        summary = "Validar token JWT",
+        description = "Valida se um token JWT é válido e retorna informações do usuário autenticado"
+    )
+    @SecurityRequirement(name = "Bearer Authentication")
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Token válido",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = TokenValidationResponse.class),
+                examples = @ExampleObject(
+                    value = """
+                    {
+                        "valido": true,
+                        "usuario": "joao@email.com",
+                        "userId": 1,
+                        "nome": "João Silva",
+                        "tipoUsuario": "USER"
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Token inválido ou não fornecido",
+            content = @Content(
+                mediaType = "application/json",
+                examples = {
+                    @ExampleObject(
+                        name = "Token não fornecido",
+                        value = """
+                        {
+                            "valido": false,
+                            "erro": "Token não fornecido ou formato inválido"
+                        }
+                        """
+                    ),
+                    @ExampleObject(
+                        name = "Token expirado",
+                        value = """
+                        {
+                            "valido": false,
+                            "erro": "Token expirado ou inválido"
+                        }
+                        """
+                    ),
+                    @ExampleObject(
+                        name = "Usuário não encontrado",
+                        value = """
+                        {
+                            "valido": false,
+                            "erro": "Usuário não encontrado"
+                        }
+                        """
+                    )
+                }
+            )
+        )
+    })
+    public ResponseEntity<?> validateToken(
+        @Parameter(
+            description = "Token JWT no formato 'Bearer {token}'",
+            required = true,
+            example = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        )
+        @RequestHeader("Authorization") String authHeader) {
+        
         try {
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 Map<String, Object> response = new HashMap<>();
@@ -141,6 +289,61 @@ public class AuthController {
     }
 
     @GetMapping("/me")
+    @Operation(
+        summary = "Obter dados do usuário atual",
+        description = "Retorna os dados do usuário autenticado com base no token JWT"
+    )
+    @SecurityRequirement(name = "Bearer Authentication")
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Dados do usuário retornados com sucesso",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = CurrentUserResponse.class),
+                examples = @ExampleObject(
+                    value = """
+                    {
+                        "userId": 1,
+                        "nome": "João Silva",
+                        "email": "joao@email.com",
+                        "telefone": "11999999999",
+                        "tipoUsuario": "USER"
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Erro ao buscar dados do usuário",
+            content = @Content(
+                mediaType = "application/json",
+                examples = {
+                    @ExampleObject(
+                        name = "Usuário não encontrado",
+                        value = """
+                        {
+                            "erro": "Usuário não encontrado"
+                        }
+                        """
+                    ),
+                    @ExampleObject(
+                        name = "Erro genérico",
+                        value = """
+                        {
+                            "erro": "Erro ao buscar dados do usuário"
+                        }
+                        """
+                    )
+                }
+            )
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Token não fornecido ou inválido"
+        )
+    })
     public ResponseEntity<?> getCurrentUser() {
         try {
             Usuario usuario = authorizationService.getCurrentUser();
@@ -165,5 +368,75 @@ public class AuthController {
             error.put("erro", "Erro ao buscar dados do usuário");
             return ResponseEntity.badRequest().body(error);
         }
+    }
+
+    // DTOs para documentação
+    @Schema(description = "Dados para realizar login")
+    public static class LoginRequest {
+        @Schema(description = "Email ou telefone do usuário", example = "joao@email.com")
+        public String identificacao;
+        
+        @Schema(description = "Senha do usuário", example = "minhasenha123")
+        public String senha;
+    }
+
+    @Schema(description = "Resposta do login bem-sucedido")
+    public static class LoginResponse {
+        @Schema(description = "Token JWT para autenticação", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+        public String token;
+        
+        @Schema(description = "ID do usuário", example = "1")
+        public Long userId;
+        
+        @Schema(description = "Nome do usuário", example = "João Silva")
+        public String nome;
+        
+        @Schema(description = "Email do usuário", example = "joao@email.com")
+        public String email;
+        
+        @Schema(description = "Telefone do usuário", example = "11999999999")
+        public String telefone;
+        
+        @Schema(description = "Tipo do usuário", example = "USER")
+        public String tipoUsuario;
+    }
+
+    @Schema(description = "Resposta da validação do token")
+    public static class TokenValidationResponse {
+        @Schema(description = "Indica se o token é válido", example = "true")
+        public Boolean valido;
+        
+        @Schema(description = "Email ou telefone do usuário", example = "joao@email.com")
+        public String usuario;
+        
+        @Schema(description = "ID do usuário", example = "1")
+        public Long userId;
+        
+        @Schema(description = "Nome do usuário", example = "João Silva")
+        public String nome;
+        
+        @Schema(description = "Tipo do usuário", example = "USER")
+        public String tipoUsuario;
+        
+        @Schema(description = "Mensagem de erro (quando token inválido)", example = "Token expirado ou inválido")
+        public String erro;
+    }
+
+    @Schema(description = "Dados do usuário atual")
+    public static class CurrentUserResponse {
+        @Schema(description = "ID do usuário", example = "1")
+        public Long userId;
+        
+        @Schema(description = "Nome do usuário", example = "João Silva")
+        public String nome;
+        
+        @Schema(description = "Email do usuário", example = "joao@email.com")
+        public String email;
+        
+        @Schema(description = "Telefone do usuário", example = "11999999999")
+        public String telefone;
+        
+        @Schema(description = "Tipo do usuário", example = "USER")
+        public String tipoUsuario;
     }
 }

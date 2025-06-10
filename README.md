@@ -8,55 +8,75 @@ O ChefIT é uma API RESTful inovadora que combina tecnologia e nutrição, ofere
 
 ```mermaid
 flowchart TD
+    subgraph Autenticação_e_Segurança
+        A[Login JWT] --> B[Validar Token]
+        B --> C[Autorização por Roles]
+        C --> D[USER]
+        C --> E[ADMIN]
+        F[Filtros de Segurança] --> G[Endpoints Protegidos]
+    end
+
     subgraph Gestão_de_Usuários
-        A[Cadastrar Usuário] --> B[Calcular Métricas]
-        B --> C{Classificar IMC}
-        C --> D[Abaixo do Peso]
-        C --> E[Peso Normal]
-        C --> F[Sobrepeso]
-        C --> G[Obesidade]
-        H[Atualizar Métricas] --> B
+        H[Cadastrar Usuário] --> I[Calcular Métricas]
+        I --> J{Classificar IMC}
+        J --> K[Abaixo do Peso]
+        J --> L[Peso Normal]
+        J --> M[Sobrepeso]
+        J --> N[Obesidade]
+        O[Atualizar Métricas] --> I
     end
 
     subgraph Plano_Alimentar
-        I[Gerar Plano Alimentar] --> J[Calcular BMR]
-        J --> K[Distribuir Calorias]
-        K --> L[Café da Manhã 25%]
-        K --> M[Almoço 35%]
-        K --> N[Jantar 30%]
-        K --> O[Lanches 10%]
+        P[Gerar Plano Alimentar] --> Q[Calcular BMR]
+        Q --> R[Distribuir Calorias]
+        R --> S[Café da Manhã 25%]
+        R --> T[Almoço 35%]
+        R --> U[Jantar 30%]
+        R --> V[Lanches 10%]
     end
 
     subgraph Gestão_de_Receitas
-        P[Cadastrar Receita] --> Q[Adicionar Ingredientes]
-        R[Buscar Receitas] --> S{Filtros}
-        S --> T[Por Categoria]
-        S --> U[Por Tempo Preparo]
-        S --> V[Por Calorias]
-        S --> W[Por Proteínas]
-        X[Favoritar Receita] --> Y[Lista de Favoritos]
+        W[Cadastrar Receita] --> X[Adicionar Ingredientes]
+        Y[Buscar Receitas] --> Z{Filtros}
+        Z --> AA[Por Categoria]
+        Z --> BB[Por Tempo Preparo]
+        Z --> CC[Por Calorias]
+        Z --> DD[Por Proteínas]
+        EE[Favoritar Receita] --> FF[Lista de Favoritos]
     end
 
     subgraph Gestão_de_Ingredientes
-        Z[Cadastrar Ingrediente] --> AA[Validar Duplicidade]
-        BB[Listar Ingredientes] --> CC[Paginação]
-        CC --> DD[Ordenação por Nome]
+        GG[Cadastrar Ingrediente] --> HH[Validar Duplicidade]
+        II[Listar Ingredientes] --> JJ[Paginação]
+        JJ --> KK[Ordenação por Nome]
     end
 
     %% Conexões entre os subgráficos
-    B --> I
-    Q --> Z
-    R --> K
-    AA --> Q
+    B --> H
+    I --> P
+    X --> GG
+    Y --> R
+    HH --> X
+    C --> W
+    C --> EE
 ```
 
 ## 🚀 Funcionalidades Principais
+
+### 🔐 Sistema de Autenticação e Autorização
+- **Autenticação JWT** com tokens seguros
+- **Sistema de Roles** (USER e ADMIN)
+- **Autorização granular** por endpoints
+- **Validação de tokens** em tempo real
+- **Filtros de segurança** customizados
+- **Login flexível** por email ou telefone
 
 ### 👤 Gestão de Usuários
 - Cadastro de perfil com dados antropométricos
 - Cálculo automático de IMC e taxa metabólica basal (BMR)
 - Acompanhamento e atualização de métricas
 - Classificação do estado nutricional
+- **Controle de acesso** - usuários só acessam seus próprios dados
 
 ### 📋 Planos Alimentares
 - Geração de planos alimentares personalizados
@@ -66,6 +86,7 @@ flowchart TD
   - Jantar (30% das calorias diárias)
   - Lanches (10% das calorias diárias)
 - Recomendações baseadas em objetivos pessoais
+- **Acesso protegido** - apenas usuários autenticados
 
 ### 🍳 Gestão de Receitas
 - Cadastro detalhado de receitas com:
@@ -79,27 +100,79 @@ flowchart TD
   - Tempo de preparo
   - Calorias
   - Proteínas
-- Sistema de receitas favoritas
+- Sistema de receitas favoritas **personalizado por usuário**
+- **Permissões diferenciadas**: leitura pública, criação autenticada
 
 ### 🥕 Gestão de Ingredientes
 - Cadastro de ingredientes com unidades de medida
 - Listagem paginada e ordenada
 - Validação de duplicidade
 - Integração com receitas
+- **Controle administrativo** - apenas ADMINs podem criar
 
 ## 🛠 Tecnologias Utilizadas
 
 - **Spring Boot**: Framework para desenvolvimento da API
+- **Spring Security**: Sistema de autenticação e autorização
+- **JWT (JSON Web Tokens)**: Autenticação stateless
 - **PostgreSQL**: Banco de dados relacional
 - **JdbcTemplate**: Camada de acesso a dados
+- **BCrypt**: Criptografia de senhas
 - **Swagger/OpenAPI**: Documentação da API
+
+## 🔐 Sistema de Segurança
+
+### Arquitetura JWT
+- **JwtService**: Geração e validação de tokens
+- **CustomUserDetails**: Implementação personalizada do UserDetails
+- **JwtAuthenticationFilter**: Filtro de autenticação por token
+- **AuthorizationService**: Serviços de autorização e controle de acesso
+
+### Roles e Permissões
+```
+USER:
+- Acessar próprios dados
+- Criar e gerenciar receitas
+- Favoritar/desfavoritar receitas
+- Visualizar ingredientes
+
+ADMIN:
+- Todas as permissões de USER
+- Criar ingredientes
+- Acessar dados de qualquer usuário
+- Gerenciar sistema
+```
+
+### Endpoints Públicos vs Protegidos
+```
+Públicos:
+- POST /auth/login
+- POST /usuarios (cadastro)
+- GET /receitas/{id}
+- GET /receitas/busca
+- GET /ingredientes
+
+Protegidos:
+- GET /auth/me
+- GET /usuarios/{id}
+- POST /receitas
+- GET /receitas/favoritas/{usuarioId}
+- POST /ingredientes (apenas ADMIN)
+```
 
 ## 📝 Endpoints Principais
 
+### Autenticação
+```
+POST /auth/login                   - Login com email/telefone
+GET /auth/validate                 - Validar token JWT
+GET /auth/me                       - Dados do usuário logado
+```
+
 ### Usuários
 ```
-POST /usuarios                     - Cadastrar novo usuário
-GET /usuarios/{id}                 - Buscar usuário por ID
+POST /usuarios                     - Cadastrar novo usuário (público)
+GET /usuarios/{id}                 - Buscar usuário por ID (próprio ou admin)
 GET /usuarios/{id}/metricas        - Calcular métricas do usuário
 PUT /usuarios/{id}/atualizar-metricas - Atualizar métricas
 GET /usuarios/{id}/plano-alimentar - Gerar plano alimentar
@@ -107,20 +180,20 @@ GET /usuarios/{id}/plano-alimentar - Gerar plano alimentar
 
 ### Receitas
 ```
-POST /receitas                     - Cadastrar nova receita
-GET /receitas/{id}                 - Buscar receita por ID
-GET /receitas/recomendadas/{usuarioId} - Buscar receitas recomendadas
-GET /receitas/busca               - Buscar receitas com filtros
-POST /receitas/{id}/favoritar/{usuarioId} - Favoritar receita
-DELETE /receitas/{id}/desfavoritar/{usuarioId} - Desfavoritar receita
-GET /receitas/favoritas/{usuarioId} - Listar receitas favoritas
+POST /receitas                     - Cadastrar nova receita (autenticado)
+GET /receitas/{id}                 - Buscar receita por ID (público)
+GET /receitas/recomendadas/{usuarioId} - Buscar receitas recomendadas (autenticado)
+GET /receitas/busca               - Buscar receitas com filtros (público)
+POST /receitas/{id}/favoritar/{usuarioId} - Favoritar receita (próprio ou admin)
+DELETE /receitas/{id}/desfavoritar/{usuarioId} - Desfavoritar receita (próprio ou admin)
+GET /receitas/favoritas/{usuarioId} - Listar receitas favoritas (próprio ou admin)
 ```
 
 ### Ingredientes
 ```
-POST /ingredientes                 - Cadastrar novo ingrediente
-GET /ingredientes                  - Listar ingredientes
-GET /ingredientes/{id}             - Buscar ingrediente por ID
+POST /ingredientes                 - Cadastrar novo ingrediente (apenas ADMIN)
+GET /ingredientes                  - Listar ingredientes (público)
+GET /ingredientes/{id}             - Buscar ingrediente por ID (público)
 ```
 
 ## 🚀 Como Executar
@@ -140,6 +213,10 @@ GET /ingredientes/{id}             - Buscar ingrediente por ID
    spring.datasource.url=jdbc:postgresql://localhost:5432/chefit
    spring.datasource.username=seu_usuario
    spring.datasource.password=sua_senha
+   
+   # Configurações JWT (opcional - usa padrões)
+   jwt.secret=${JWT_SECRET:SuaChaveSecretaAqui}
+   jwt.expiration=1800000
    ```
 
 4. **Compilar e Executar**
@@ -153,6 +230,36 @@ GET /ingredientes/{id}             - Buscar ingrediente por ID
    http://localhost:8080/swagger-ui.html
    ```
 
+## 🔑 Como Usar a Autenticação
+
+### 1. Fazer Login
+```bash
+curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "identificacao": "usuario@email.com",
+    "senha": "123456"
+  }'
+```
+
+### 2. Usar o Token
+```bash
+curl -X GET http://localhost:8080/auth/me \
+  -H "Authorization: Bearer SEU_TOKEN_AQUI"
+```
+
+### 3. Resposta do Login
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "userId": 1,
+  "nome": "João Silva",
+  "email": "joao@email.com",
+  "telefone": "11999999999",
+  "tipoUsuario": "USER"
+}
+```
+
 ## 📊 Estrutura do Banco de Dados
 
 ### Tabelas Principais
@@ -160,7 +267,8 @@ GET /ingredientes/{id}             - Buscar ingrediente por ID
 - **usuarios**
   - Dados pessoais
   - Métricas antropométricas
-  - Preferências alimentares
+  - **Senha criptografada (BCrypt)**
+  - **Tipo de usuário (USER/ADMIN)**
 
 - **receitas**
   - Informações da receita
@@ -177,13 +285,18 @@ GET /ingredientes/{id}             - Buscar ingrediente por ID
 
 - **receitas_favoritas**
   - Relacionamento entre usuários e receitas favoritas
+  - **Controle de acesso por usuário**
 
 ## 🔐 Segurança e Validações
 
-- Validação de dados de entrada
-- Tratamento de duplicidade
-- Respostas padronizadas de erro
-- Paginação para grandes conjuntos de dados
+- **Autenticação JWT** stateless
+- **Autorização baseada em roles**
+- **Criptografia de senhas** com BCrypt
+- **Validação de propriedade** de recursos
+- **Filtros de segurança** em toda a aplicação
+- **Tratamento seguro de erros**
+- **Validação de dados de entrada**
+- **Paginação para grandes conjuntos de dados**
 
 ## 📈 Métricas e Cálculos
 
@@ -212,12 +325,26 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para ma
 
 ## ✨ Próximos Passos
 
-- [ ] Implementação de autenticação JWT
+- [x] **Implementação de autenticação JWT** ✅
+- [x] **Sistema de autorização por roles** ✅
+- [x] **Controle de acesso granular** ✅
+- [ ] Refresh Tokens para melhor experiência do usuário
 - [ ] Integração com serviço de imagens para receitas
 - [ ] Sistema de avaliações e comentários
 - [ ] Exportação de plano alimentar em PDF
 - [ ] Integração com aplicativo móvel
 - [ ] Sistema de notificações e lembretes
+- [ ] Rate limiting para APIs
+- [ ] Logs de auditoria
+
+## 🛡️ Considerações de Segurança em Produção
+
+- **Variáveis de ambiente** para chaves secretas
+- **HTTPS obrigatório** em produção
+- **Configuração de CORS** adequada
+- **Monitoramento de tentativas de login**
+- **Logs de segurança**
+- **Backup e recovery** do banco de dados
 
 ## 📧 Contato
 
